@@ -1,60 +1,95 @@
 // @flow
-import * as _ from "lodash";
-import {FileSystem} from "expo";
+import {Platform} from "react-native";
+import RNFS from "react-native-fs";
 import SHA1 from "crypto-js/sha1";
 
-const BASE_DIR = `${FileSystem.cacheDirectory}expo-image-cache/`;
+const BASE_DIR = `${RNFS.DocumentDirectoryPath}/expo-image-cache/`;
 
 export class CacheEntry {
 
-    uri: string
+    key: string;
     path: string;
 
-    constructor(uri: string) {
-        this.uri = uri;
+    constructor(key: string) {
+        this.key = key;
     }
 
-    async getPath(): Promise<?string> {
-        const {uri} = this;
-        const {path, exists, tmpPath} = await getCacheEntry(uri);
+    async getPath(extension: string, fetchPresignedUrl: () => ?string): Promise<?string> {
+        const {key} = this;
+        const {path, exists} = await getCacheEntry(key, extension);
         if (exists) {
-            return path;
+            return Platform.OS === "android" ? `file://${path}` : path;
         }
-        await FileSystem.downloadAsync(uri, tmpPath);
-        await FileSystem.moveAsync({ from: tmpPath, to: path });
-        return path;
+
+        const uri = await fetchPresignedUrl();
+        if (!uri) {
+            return null;
+        }
+
+        try {
+            await RNFS.downloadFile({
+                fromUrl: uri,
+                toFile: path
+            });
+        } catch (e) {
+            return null;
+        }
+
+        const downloaded = await RNFS.exists(path);
+        if (!downloaded) {
+            return null;
+        }
+
+        return Platform.OS === "android" ? `file://${path}` : path;
     }
 }
 
 export default class CacheManager {
 
-    static entries: { [uri: string]: CacheEntry } = {};
+    static entries: { [key: string]: CacheEntry } = {};
 
-    static get(uri: string): CacheEntry {
-        if (!CacheManager.entries[uri]) {
-            CacheManager.entries[uri] = new CacheEntry(uri);
+    static get(key: string): CacheEntry {
+        if (!CacheManager.entries[key]) {
+            CacheManager.entries[key] = new CacheEntry(key);
         }
-        return CacheManager.entries[uri];
+        return CacheManager.entries[key];
     }
 
     static async clearCache(): Promise<void> {
-        await FileSystem.deleteAsync(BASE_DIR, { idempotent: true });
-        await FileSystem.makeDirectoryAsync(BASE_DIR);
+        try {
+            const hasBaseDir = await RNFS.exists(BASE_DIR);
+            if (hasBaseDir) {
+                await RNFS.unlink(BASE_DIR);
+                await createCacheDirectory();
+            }
+        } catch (e) {
+            // do nothing
+        }
     }
 }
 
-const getCacheEntry = async (uri: string): Promise<{ exists: boolean, path: string, tmpPath: string }> => {
-    const filename = uri.substring(uri.lastIndexOf("/"), uri.indexOf("?") === -1 ? uri.length : uri.indexOf("?"));
-    const ext = filename.indexOf(".") === -1 ? ".jpg" : filename.substring(filename.lastIndexOf("."));
-    const path = `${BASE_DIR}${SHA1(uri)}${ext}`;
-    const tmpPath = `${BASE_DIR}${SHA1(uri)}-${_.uniqueId()}${ext}`;
-    // TODO: maybe we don't have to do this every time
+const createCacheDirectory = async (): Promise<void> => {
+    await RNFS.mkdir(BASE_DIR, {
+        ...Platform.select({
+            ios: {
+                NSURLIsExcludedFromBackupKey: true
+            },
+            android: {}
+        })
+    });
+};
+
+const getCacheEntry = async (key: string, extension: string): Promise<{ exists: boolean, path: string }> => {
     try {
-        await FileSystem.makeDirectoryAsync(BASE_DIR);
+        const hasBaseDir = await RNFS.exists(BASE_DIR);
+        if (!hasBaseDir) {
+            await createCacheDirectory();
+        }
     } catch (e) {
         // do nothing
     }
-    const info = await FileSystem.getInfoAsync(path);
-    const {exists} = info;
-    return { exists, path, tmpPath };
+
+    const path = `${BASE_DIR}${SHA1(key)}${extension}`;
+    const exists = await RNFS.exists(path);
+    return { exists, path };
 };

@@ -2,8 +2,7 @@
 import * as _ from "lodash";
 import * as React from "react";
 import {Image as RNImage, Animated, StyleSheet, View, Platform} from "react-native";
-import {BlurView} from "expo";
-import {type ImageStyle} from "react-native/Libraries/StyleSheet/StyleSheetTypes";
+import type {ImageStyle} from "react-native/Libraries/StyleSheet/StyleSheetTypes";
 import type {ImageSourcePropType} from "react-native/Libraries/Image/ImageSourcePropType";
 
 import CacheManager from "./CacheManager";
@@ -11,10 +10,12 @@ import CacheManager from "./CacheManager";
 type ImageProps = {
     style?: ImageStyle,
     defaultSource?: ImageSourcePropType,
+    extension?: ?string,
     preview?: ImageSourcePropType,
-    uri: string,
+    cacheKey: string,
     transitionDuration?: number,
-    tint?: "dark" | "light"
+    tint?: "dark" | "light",
+    fetchPresignedUrl: () => ?string
 };
 
 type ImageState = {
@@ -23,10 +24,8 @@ type ImageState = {
 };
 
 export default class Image extends React.Component<ImageProps, ImageState> {
-
-    mounted = true;
-
     static defaultProps = {
+        extension: null,
         transitionDuration: 300,
         tint: "dark"
     };
@@ -36,12 +35,11 @@ export default class Image extends React.Component<ImageProps, ImageState> {
         intensity: new Animated.Value(100)
     };
 
-    async load({uri}: ImageProps): Promise<void> {
-        if (uri) {
-            const path = await CacheManager.get(uri).getPath();
-            if (this.mounted) {
-                this.setState({ uri: path });
-            }
+    async load({fetchPresignedUrl, cacheKey, extension}: ImageProps): Promise<void> {
+        const cache = await CacheManager.get(cacheKey);
+        if (cache) {
+            const uri = await cache.getPath(extension || ".jpg", fetchPresignedUrl);
+            this.setState({ uri });
         }
     }
 
@@ -52,7 +50,7 @@ export default class Image extends React.Component<ImageProps, ImageState> {
     componentDidUpdate(prevProps: ImageProps, prevState: ImageState) {
         const {preview, transitionDuration} = this.props;
         const {uri, intensity} = this.state;
-        if (this.props.uri !== prevProps.uri) {
+        if (this.props.cacheKey !== prevProps.cacheKey) {
             this.load(this.props);
         } else if (uri && preview && prevState.uri === undefined) {
             Animated.timing(intensity, {
@@ -61,10 +59,6 @@ export default class Image extends React.Component<ImageProps, ImageState> {
                 useNativeDriver: Platform.OS === "android"
             }).start();
         }
-    }
-
-    componentWillUnmount() {
-        this.mounted = false;
     }
 
     render(): React.Node {
@@ -85,6 +79,7 @@ export default class Image extends React.Component<ImageProps, ImageState> {
                 (result, value, key) => Object.assign(result, { [key]: (value - (style.borderWidth || 0)) })
             )
         ];
+
         return (
             <View {...{style}}>
                 {
@@ -109,15 +104,10 @@ export default class Image extends React.Component<ImageProps, ImageState> {
                 {
                     isImageReady && (
                         <RNImage
-                            source={{ uri }}
+                            source={{ uri, isStatic: true }}
                             style={computedStyle}
                             {...otherProps}
                         />
-                    )
-                }
-                {
-                    hasPreview && Platform.OS === "ios" && (
-                        <AnimatedBlurView style={computedStyle} {...{intensity, tint}} />
                     )
                 }
                 {
@@ -137,4 +127,3 @@ const white = "white";
 const propsToCopy = [
     "borderRadius", "borderBottomLeftRadius", "borderBottomRightRadius", "borderTopLeftRadius", "borderTopRightRadius"
 ];
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);

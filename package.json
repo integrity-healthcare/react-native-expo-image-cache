@@ -49,8 +49,8 @@
     "lodash": "^4.17.4"
   },
   "peerDependencies": {
-    "expo": "*",
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-fs": "*"
   }
 }
