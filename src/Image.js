@@ -5,7 +5,7 @@ import {Image as RNImage, Animated, StyleSheet, View, Platform} from "react-nati
 import type {ImageStyle} from "react-native/Libraries/StyleSheet/StyleSheetTypes";
 import type {ImageSourcePropType} from "react-native/Libraries/Image/ImageSourcePropType";
 
-import CacheManager from "./CacheManager";
+import CacheManager from "./cache_manager";
 
 type ImageProps = {
     style?: ImageStyle,
@@ -45,8 +45,14 @@ export default class Image extends React.Component<ImageProps, ImageState> {
 
         const cache = await CacheManager.get(cacheKey);
         if (cache) {
-            const uri = await cache.getPath(extension || ".jpg", fetchPresignedUrl);
-            this.setState({ uri });
+            try {
+                const uri = await cache.getPath(extension || ".jpg", fetchPresignedUrl);
+                if (uri) {
+                  this.setState({ uri });
+                }
+            } catch (e) {
+                // do nothing
+            }
         }
     }
 
@@ -114,7 +120,7 @@ export default class Image extends React.Component<ImageProps, ImageState> {
                     )
                 }
                 {
-                    isImageReady && (
+                    this.mounted && isImageReady && (
                         <RNImage
                             source={{ uri, isStatic: true }}
                             style={computedStyle}

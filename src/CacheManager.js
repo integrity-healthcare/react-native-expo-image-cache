@@ -27,20 +27,17 @@ export class CacheEntry {
         }
 
         try {
-            await RNFS.downloadFile({
+            const result = await RNFS.downloadFile({
                 fromUrl: uri,
                 toFile: path
             });
+            await result.promise;
+            return Platform.OS === "android" ? `file://${path}` : path;
         } catch (e) {
-            return null;
+            // do nothing
         }
 
-        const downloaded = await RNFS.exists(path);
-        if (!downloaded) {
-            return null;
-        }
-
-        return Platform.OS === "android" ? `file://${path}` : path;
+        return null;
     }
 }
 
