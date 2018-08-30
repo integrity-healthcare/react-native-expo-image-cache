@@ -5,7 +5,7 @@ import {Image as RNImage, Animated, StyleSheet, View, Platform} from "react-nati
 import type {ImageStyle} from "react-native/Libraries/StyleSheet/StyleSheetTypes";
 import type {ImageSourcePropType} from "react-native/Libraries/Image/ImageSourcePropType";
 
-import CacheManager from "./cache_manager";
+import CacheManager from "./CacheManager";
 
 type ImageProps = {
     style?: ImageStyle,
