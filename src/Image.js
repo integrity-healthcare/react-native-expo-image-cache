@@ -24,6 +24,9 @@ type ImageState = {
 };
 
 export default class Image extends React.Component<ImageProps, ImageState> {
+
+    mounted = false;
+
     static defaultProps = {
         extension: null,
         transitionDuration: 300,
@@ -36,6 +39,10 @@ export default class Image extends React.Component<ImageProps, ImageState> {
     };
 
     async load({fetchPresignedUrl, cacheKey, extension}: ImageProps): Promise<void> {
+        if (!this.mounted) {
+            return;
+        }
+
         const cache = await CacheManager.get(cacheKey);
         if (cache) {
             const uri = await cache.getPath(extension || ".jpg", fetchPresignedUrl);
@@ -44,6 +51,7 @@ export default class Image extends React.Component<ImageProps, ImageState> {
     }
 
     componentDidMount() {
+        this.mounted = true;
         this.load(this.props);
     }
 
@@ -59,6 +67,10 @@ export default class Image extends React.Component<ImageProps, ImageState> {
                 useNativeDriver: Platform.OS === "android"
             }).start();
         }
+    }
+
+    componentWillUnmount() {
+        this.mounted = false;
     }
 
     render(): React.Node {
