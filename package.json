@@ -51,6 +51,6 @@
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
-    "react-native-fs": "*"
+    "react-native-fs": "https://github.com/integrity-healthcare/react-native-fs/#master"
   }
 }
