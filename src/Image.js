@@ -47,7 +47,7 @@ export default class Image extends React.Component<ImageProps, ImageState> {
         if (cache) {
             try {
                 const uri = await cache.getPath(extension || ".jpg", fetchPresignedUrl);
-                if (uri) {
+                if (uri && this.mounted) {
                   this.setState({ uri });
                 }
             } catch (e) {
