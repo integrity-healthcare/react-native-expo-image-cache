@@ -11,6 +11,8 @@ export class CacheEntry {
     path: string;
 
     constructor(key: string) {
+        console.log("--------------");
+        console.log(BASE_DIR);
         this.key = key;
     }
 
@@ -18,6 +20,8 @@ export class CacheEntry {
         const {key} = this;
         const {path, exists} = await getCacheEntry(key, extension);
         if (exists) {
+            console.log("#####################");
+            console.log(path);
             return Platform.OS === "android" ? `file://${path}` : path;
         }
 
