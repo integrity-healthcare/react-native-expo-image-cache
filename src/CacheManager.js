@@ -53,6 +53,10 @@ export default class CacheManager {
 
     static entries: { [key: string]: CacheEntry } = {};
 
+    static tmpFunc() {
+        return BASE_DIR;
+    }
+
     static get(key: string): CacheEntry {
         if (!CacheManager.entries[key]) {
             CacheManager.entries[key] = new CacheEntry(key);
