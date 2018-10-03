@@ -16,6 +16,10 @@ export class CacheEntry {
         this.key = key;
     }
 
+    tmpFunc() {
+        return BASE_DIR;
+    }
+
     async getPath(extension: string, fetchPresignedUrl: () => ?string): Promise<?string> {
         const {key} = this;
         const {path, exists} = await getCacheEntry(key, extension);
