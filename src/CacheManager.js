@@ -65,17 +65,25 @@ export default class CacheManager {
     }
 
     static async clearCacheFiles(olderThan: Date): Promise<void> {
-        let cacheFiles: ?Array<Object> = null;
-        cacheFiles = await RNFS.readDir(BASE_DIR);
-        cacheFiles = cacheFiles.filter(cacheFile => cacheFile.mtime && cacheFile.mtime < olderThan)
+        try {
+            const hasBaseDir = await RNFS.exists(BASE_DIR);
+            if (!hasBaseDir) {
+                return;
+            }
 
-        if (!cacheFiles && cacheFiles.length <= 0) {
+            let cacheFiles: ?Array<Object> = null;
+            cacheFiles = await RNFS.readDir(BASE_DIR);
+            cacheFiles = cacheFiles.filter(cacheFile => cacheFile.mtime && cacheFile.mtime < olderThan)
+            if (!cacheFiles && cacheFiles.length <= 0) {
+                return;
+            }
+
+            const promises = cacheFiles.map(cacheFile => RNFS.unlink(cacheFile.path));
+            // Be aware that it is fail-fast.
+            await Promise.all(promises);
+        } catch (e) {
             return;
         }
-
-        const promises = cacheFiles.map(cacheFile => RNFS.unlink(cacheFile.path));
-        // Be aware that it is fail-fast.
-        await Promise.all(promises);
     }
 }
 
