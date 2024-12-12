@@ -49,5 +49,13 @@
     "react": "*",
     "react-native": "*",
     "react-native-fs": "*"
+  },
+  "module": "dist/module/index.js",
+  "@react-native-community/bob": {
+    "source": "src",
+    "output": "dist",
+    "targets": [
+      "module"
+    ]
   }
 }
